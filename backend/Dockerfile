@@ -1,18 +1,29 @@
-# Use lightweight Node image
-FROM node:18-alpine
+# ---------- Build Stage ----------
+FROM node:18-alpine AS builder
 
-# Create app directory
 WORKDIR /usr/src/app
 
-# Install dependencies first (better caching)
 COPY package*.json ./
-RUN npm install --production
+RUN npm install
 
-# Copy app source
 COPY . .
 
-# Expose port
+# ---------- Production Stage ----------
+FROM node:18-alpine
+
+WORKDIR /usr/src/app
+
+# Copy only what we need from builder
+COPY --from=builder /usr/src/app ./
+
+# Use non-root user for security
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+USER appuser
+
 EXPOSE 5000
 
-# Start app
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+CMD wget -qO- http://localhost:5000/health || exit 1
+
+
 CMD ["npm", "start"]

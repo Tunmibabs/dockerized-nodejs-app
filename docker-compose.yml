@@ -1,18 +1,28 @@
 version: "3.9"
 
 services:
-  backend:
-    build: ./backend
-    container_name: node-backend
+  nginx:
+    image: nginx:alpine
+    container_name: nginx-proxy
     ports:
-      - "5000:5000"
-    env_file:
-      - .env
+      - "80:80"
+    volumes:
+      - ./nginx:/etc/nginx:ro
     depends_on:
-      - db
+      - backend
     networks:
       - app-network
 
+  backend:
+    build: ./backend
+    container_name: node-backend
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_started
+    networks:
+      - app-network
   db:
     image: postgres:15-alpine
     container_name: postgres-db
